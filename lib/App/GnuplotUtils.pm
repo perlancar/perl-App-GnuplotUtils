@@ -6,6 +6,7 @@ package App::GnuplotUtils;
 use 5.010001;
 use strict;
 use warnings;
+use Log::ger;
 
 our %SPEC;
 
@@ -22,7 +23,7 @@ Example `input.txt`:
     4 7.9
     6 11.5
 
-Example using `xychart`:
+Example using `xyplot`:
 
     % xyplot < input.txt
 
@@ -41,7 +42,7 @@ _
         prog => 'gnuplot',
     },
 };
-sub xychart {
+sub xyplot {
     my %args = @_;
 
     my $fieldsep_re = qr/\s+/;
@@ -78,6 +79,8 @@ sub xychart {
 
     require Browser::Open;
     Browser::Open::open_browser("file:$filename");
+
+    [200];
 }
 
 1;
