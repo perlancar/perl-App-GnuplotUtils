@@ -1,6 +1,8 @@
 package App::GnuplotUtils;
 
+# AUTHORITY
 # DATE
+# DIST
 # VERSION
 
 use 5.010001;
@@ -36,7 +38,16 @@ _
             schema => 'str*',
             cmdline_aliases => {d=>{}},
         },
-        # XXX more options
+        plot_style => {
+            schema => ['str*', in=>[
+                'lines', 'points', 'linespoints', 'dots', 'impluses', 'steps',
+                'boxes', 'xerrorbars', 'yerrorbars', 'xyerrorbars',
+                'xerrorlines', 'yerrorlines', 'xyerrorlines', 'boxerrorbars',
+                'boxxyerrorbars', 'financebars', 'candlesticks', 'hbars',
+                'hlines', 'vectors', 'circles', 'histograms',
+            ]],
+            default => 'points',
+        },
     },
     deps => {
         prog => 'gnuplot',
@@ -73,7 +84,7 @@ sub xyplot {
         xdata => \@x,
         ydata => \@y,
         title => "(Untitled dataset)",
-        style => "points", # "linespoints",
+        style => $args{plot_style},
     );
     $chart->plot2d($dataset);
 
