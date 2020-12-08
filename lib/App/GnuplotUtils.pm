@@ -55,7 +55,7 @@ sub xyplot {
         chomp;
         my @f = split $fieldsep_re, $_;
         push @x, $f[0];
-        push @y, $f[0];
+        push @y, $f[1];
     }
 
     require Chart::Gnuplot;
