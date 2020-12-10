@@ -18,8 +18,7 @@ $SPEC{xyplot} = {
     description => <<'_',
 
 Example `input1.txt`, each line contains whitespace-separated values of X data
-(number), Y data (number), X tic label (string, optional), Y tic label (string,
-optional):
+(number), Y data (number):
 
     1 1
     2 3
@@ -31,8 +30,7 @@ Example using `xyplot` (one data-set):
 
     % xyplot < input1.txt
 
-Example `input2.txt` (note that only the first dataset is allowed to set X and Y
-labels [TODO: allow secondary axes/tic labels]):
+Example `input2.txt`:
 
     1 8
     2 12
@@ -117,13 +115,11 @@ sub xyplot {
         $n = $#{ $args{dataset_files} };
     }
     for my $i (0..$n) {
-        my (@x, @y, @xticlabels, @yticlabels);
+        my (@x, @y);
         if ($args{datasets}) {
             my $dataset = $args{datasets}[$i];
             @x          = map { $_->{x} }      @$dataset;
             @y          = map { $_->{y} }      @$dataset;
-            @xticlabels = map { $_->{xlabel} } @$dataset;
-            @yticlabels = map { $_->{ylabel} } @$dataset;
         } else {
             my $filename = $args{dataset_files}[$i];
             my $content = File::Slurper::Dash::read_text($filename);
@@ -133,8 +129,6 @@ sub xyplot {
                 my @f = split $fieldsep_re, $line;
                 push @x, $f[0];
                 push @y, $f[1];
-                push @xticlabels, $f[2] if @f >= 3 && defined $f[2] && length $f[2];
-                push @yticlabels, $f[3] if @f >= 4 && defined $f[3] && length $f[3];
             }
         }
 
@@ -142,16 +136,11 @@ sub xyplot {
             ($tempfh, $tempfilename) = File::Temp::tempfile();
             $tempfilename .= ".png";
             log_trace "Output filename: %s", $tempfilename;
-            use DD;
             $chart = Chart::Gnuplot->new(
-                dd(
-                    output => $tempfilename,
+                output => $tempfilename,
                 title => $args{chart_title} // "(No title)",
                 xlabel => "x",
                 ylabel => "y",
-                (@xticlabels ? (xtics => {labels=>\@xticlabels, labelfmt=>'%s'}) : ()),
-                    (@yticlabels ? (ytics => {labels=>\@yticlabels, labelfmt=>'%s'}) : ()),
-                )
             );
         }
 
