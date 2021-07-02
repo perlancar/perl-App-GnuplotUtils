@@ -113,6 +113,10 @@ _
     deps => {
         prog => 'gnuplot',
     },
+    links => [
+        {url=>'prog:tchart', summary=>'From App::tchart Perl module, to quickly create ASCII chart, currently sparklines'},
+        {url=>'prog:asciichart', summary=>'From App::AsciiChart Perl module, to quickly create ASCII chart'},
+    ],
 };
 sub xyplot {
     require Chart::Gnuplot;
@@ -207,7 +211,5 @@ mostly simple/convenience wrappers for gnuplot:
 
 # INSERT_EXECS_LIST
 
-
-=head1 SEE ALSO
 
 =cut
