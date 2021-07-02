@@ -58,6 +58,17 @@ _
         chart_title => {
             schema => 'str*',
         },
+        output_file => {
+            schema => 'filename*',
+            cmdline_aliases => {o=>{}},
+            tags => ['category:output'],
+        },
+        overwrite => {
+            schema => 'bool*',
+            cmdline_aliases => {O=>{}},
+            tags => ['category:output'],
+        },
+
         field_delimiter => {
             summary => 'Supply field delimiter character in dataset file instead of the default whitespace(s) or comma(s)',
             schema => 'str*',
@@ -115,8 +126,26 @@ sub xyplot {
         $fieldsep_re = qr/\Q$args{delimited}\E/;
     }
 
-    my $chart;
-    my ($tempfh, $tempfilename);
+    my ($outputfilename);
+    if (defined $args{output_file}) {
+        $outputfilename = $args{output_file};
+        if (-f $outputfilename && !$args{overwrite}) {
+            return [412, "Not overwriting existing file '$outputfilename', use --overwrite (-O) to overwrite"];
+        }
+    } else {
+        my $tempfh;
+        ($tempfh, $outputfilename) = File::Temp::tempfile();
+        $outputfilename .= ".png";
+    }
+    log_trace "Output filename: %s", $outputfilename;
+
+    my $chart = Chart::Gnuplot->new(
+        output => $outputfilename,
+        title => $args{chart_title} // "(chart created by xyplot on ".scalar(localtime).")",
+        xlabel => "x",
+        ylabel => "y",
+    );
+
     my $n;
     if ($args{dataset_datas}) {
         $n = $#{ $args{dataset_datas} };
@@ -145,18 +174,6 @@ sub xyplot {
             }
         }
 
-        unless ($tempfh) {
-            ($tempfh, $tempfilename) = File::Temp::tempfile();
-            $tempfilename .= ".png";
-            log_trace "Output filename: %s", $tempfilename;
-            $chart = Chart::Gnuplot->new(
-                output => $tempfilename,
-                title => $args{chart_title} // "(chart created by xyplot on ".scalar(localtime).")",
-                xlabel => "x",
-                ylabel => "y",
-            );
-        }
-
         my $dataset = Chart::Gnuplot::DataSet->new(
             xdata => \@x,
             ydata => \@y,
@@ -167,10 +184,17 @@ sub xyplot {
     }
     $chart->plot2d(@datasets);
 
-    require Browser::Open;
-    Browser::Open::open_browser("file:$tempfilename");
-
-    [200];
+    if (defined $args{output_file}) {
+        return [200];
+    } else {
+        require Desktop::Open;
+        my $res = Desktop::Open::open_desktop("file:$outputfilename");
+        if (defined $res && $res == 0) {
+            return [200];
+        } else {
+            return [500, "Can't open $outputfilename"];
+        }
+    }
 }
 
 1;
