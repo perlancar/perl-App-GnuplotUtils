@@ -17,32 +17,39 @@ $SPEC{xyplot} = {
     summary => "Plot XY dataset(s) using gnuplot",
     description => <<'_',
 
-Example `input1.txt`, each line contains whitespace-separated values of X data
-(number), Y data (number):
+This utility is a wrapper for gnuplot to quickly generate a graph from the
+command-line and view it using a browser or an image viewer program. You can
+specify the dataset to plot directly from the command-line or specify filename
+to read the dataset from.
 
-    1 1
-    2 3
-    3 5.5
-    4 7.9
-    6 11.5
+To plot directly from the command-line:
 
-Example using `xyplot` (one data-set):
+    % xyplot --dataset-data '1,1, 2,3, 3,5.5, 4,7.9, 6,11.5' ; # whitespaces are optional
 
-    % xyplot < input1.txt
+To add more datasets, specify more `--dataset-data` options:
 
-Example `input2.txt`:
+    % xyplot --dataset-data '1,1, 2,3, 3,5.5, 4,7.9, 6,11.5' \
+             --dataset-data '1,4,2,4,3,2,4,9,5,3,6,6'
 
-    1 8
-    2 12
-    3 5
-    4 4
-    6 8
+To add a title to your chart and every dataset:
 
-Using two datasets:
+    % xyplot --chart-title "my chart" \
+             --dataset-title "foo" --dataset-data '1,1, 2,3, 3,5.5, 4,7.9, 6,11.5' \
+             --dataset-title "bar" --dataset-data '1,4,2,4,3,2,4,9,5,3,6,6'
 
-    % xyplot --dataset-file  input1.txt  --dataset-file  input2.txt \
-             --dataset-color red         --dataset-color blue \
-             --dataset-style linespoints --dataset-style points
+To specify dataset from a file, use `--dataset-file` option (or specify as
+arguments):
+
+    % xyplot --dataset-file ds1.txt --dataset-file ds2.txt
+    % xyplot ds1.txt ds2.txt
+
+`ds1.txt` contains these lines:
+
+ 1 1
+ 2 3
+ 3 5.5
+ 4 7.9
+ 6 11.5
 
 Keywords: xychart, XY chart, XY plot
 
@@ -52,21 +59,23 @@ _
             schema => 'str*',
         },
         field_delimiter => {
-            summary => 'Supply field delimiter character in dataset file instead of the default whitespace(s)',
+            summary => 'Supply field delimiter character in dataset file instead of the default whitespace(s) or comma(s)',
             schema => 'str*',
             cmdline_aliases => {d=>{}},
         },
-        datasets => {
+        dataset_datas => {
             summary => 'Dataset(s)',
             'x.name.is_plural' => 1,
-            'x.name.singular' => 'dataset',
-            'schema' => ['array*', of=>'array*'],
+            'x.name.singular' => 'dataset_data',
+            'schema' => ['array*', of=>'str*'],
         },
         dataset_files => {
             summary => 'Dataset(s) from file(s)',
             'x.name.is_plural' => 1,
             'x.name.singular' => 'dataset_file',
             'schema' => ['array*', of=>'filename*'],
+            pos => 0,
+            slurpy => 1,
         },
         dataset_titles => {
             summary => 'Dataset title(s)',
@@ -88,7 +97,7 @@ _
         },
     },
     args_rels => {
-        req_one => [qw/datasets dataset_files/],
+        req_one => [qw/dataset_datas dataset_files/],
     },
     deps => {
         prog => 'gnuplot',
@@ -101,7 +110,7 @@ sub xyplot {
 
     my %args = @_;
 
-    my $fieldsep_re = qr/\s+/;
+    my $fieldsep_re = qr/\s+|\s*,\s*/;
     if (defined $args{delimited}) {
         $fieldsep_re = qr/\Q$args{delimited}\E/;
     }
@@ -109,17 +118,21 @@ sub xyplot {
     my $chart;
     my ($tempfh, $tempfilename);
     my $n;
-    if ($args{datasets}) {
-        $n = $#{ $args{datasets} };
+    if ($args{dataset_datas}) {
+        $n = $#{ $args{dataset_datas} };
     } else {
         $n = $#{ $args{dataset_files} };
     }
+
+    my @datasets;
     for my $i (0..$n) {
         my (@x, @y);
-        if ($args{datasets}) {
-            my $dataset = $args{datasets}[$i];
-            @x          = map { $_->{x} }      @$dataset;
-            @y          = map { $_->{y} }      @$dataset;
+        if ($args{dataset_datas}) {
+            my $dataset = [split $fieldsep_re, $args{dataset_datas}[$i]];
+            while (@$dataset) {
+                push @x, shift @$dataset;
+                push @y, shift @$dataset;
+            }
         } else {
             my $filename = $args{dataset_files}[$i];
             my $content = File::Slurper::Dash::read_text($filename);
@@ -138,7 +151,7 @@ sub xyplot {
             log_trace "Output filename: %s", $tempfilename;
             $chart = Chart::Gnuplot->new(
                 output => $tempfilename,
-                title => $args{chart_title} // "(No title)",
+                title => $args{chart_title} // "(chart created by xyplot on ".scalar(localtime).")",
                 xlabel => "x",
                 ylabel => "y",
             );
@@ -147,11 +160,12 @@ sub xyplot {
         my $dataset = Chart::Gnuplot::DataSet->new(
             xdata => \@x,
             ydata => \@y,
-            title => $args{dataset_titles}[$i] // "(Untitled dataset #$i)",
-            style => $args{dataset_styles}[$i] // 'points',
+            title => $args{dataset_titles}[$i] // "(dataset #$i)",
+            style => $args{dataset_styles}[$i] // 'linespoints',
         );
-        $chart->plot2d($dataset);
+        push @datasets, $dataset;
     }
+    $chart->plot2d(@datasets);
 
     require Browser::Open;
     Browser::Open::open_browser("file:$tempfilename");
