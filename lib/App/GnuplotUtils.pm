@@ -18,9 +18,12 @@ $SPEC{xyplot} = {
     description => <<'_',
 
 This utility is a wrapper for gnuplot to quickly generate a graph from the
-command-line and view it using a browser or an image viewer program. You can
-specify the dataset to plot directly from the command-line or specify filename
-to read the dataset from.
+command-line and view it using an image viewer program or a browser.
+
+**Specifying dataset**
+
+You can specify the dataset to plot directly from the command-line or specify
+filename to read the dataset from.
 
 To plot directly from the command-line:
 
@@ -55,7 +58,18 @@ You can also accept from stdin:
 
  % tabulate-drug-concentration ... | xyplot -
 
-Keywords: xychart, XY chart, XY plot
+
+**Seeing plot result**
+
+`xyplot` uses <pm:Desktop::Open> to view the resulting plot. The module will
+first find a suitable application, and failing that will use the web browser. If
+you specify `--output-file` (`-o`), the plot is written to the specified image
+file.
+
+
+**Keywords**
+
+xychart, XY chart, XY plot
 
 _
     args => {
