@@ -1,3 +1,15 @@
+0.004   2023-10-20  Released-By: PERLANCAR; Urgency: low
+
+        - No functional changes.
+
+        - [doc] Tweak description: describe how the plot will be
+          seen/saved.
+
+        - [doc][ux] Show how to accept data from stdin.
+
+        - [doc] Mention tchart & asciichart.
+
+
 0.003   2021-07-02  Released-By: PERLANCAR; Urgency: medium
 
         - [incompatible change] Rename --datasets to --dataset-datas
