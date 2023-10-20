@@ -51,6 +51,10 @@ arguments):
  4 7.9
  6 11.5
 
+You can also accept from stdin:
+
+ % tabulate-drug-concentration ... | xyplot -
+
 Keywords: xychart, XY chart, XY plot
 
 _
