@@ -25,36 +25,41 @@ command-line and view it using an image viewer program or a browser.
 You can specify the dataset to plot directly from the command-line or specify
 filename to read the dataset from.
 
-To plot directly from the command-line:
+To plot directly from the command-line, specify comma-separated list of X & Y
+number pairs using `--dataset-data` option:
 
     % xyplot --dataset-data '1,1, 2,3, 3,5.5, 4,7.9, 6,11.5' ; # whitespaces are optional
 
 To add more datasets, specify more `--dataset-data` options:
 
     % xyplot --dataset-data '1,1, 2,3, 3,5.5, 4,7.9, 6,11.5' \
-             --dataset-data '1,4,2,4,3,2,4,9,5,3,6,6'
+             --dataset-data '1,4,2,4,3,2,4,9,5,3,6,6';         # will plot two lines
 
-To add a title to your chart and every dataset:
+To add a title to your chart and every dataset, use `--dataset-title`:
 
     % xyplot --chart-title "my chart" \
              --dataset-title "foo" --dataset-data '1,1, 2,3, 3,5.5, 4,7.9, 6,11.5' \
              --dataset-title "bar" --dataset-data '1,4,2,4,3,2,4,9,5,3,6,6'
 
-To specify dataset from a file, use `--dataset-file` option (or specify as
-arguments):
+To specify dataset from files, use one or more `--dataset-file` options (or
+specify the filenames as arguments):
 
     % xyplot --dataset-file ds1.txt --dataset-file ds2.txt
     % xyplot ds1.txt ds2.txt
 
-`ds1.txt` contains these lines:
+`ds1.txt` should contain comma, or whitespace-separated list of X & Y numbers.
+You can put one number per line or more.
 
  1 1
  2 3
  3 5.5
  4 7.9
  6 11.5
+ 8
+ 13.5
+ 9 14.2 10 14.8
 
-You can also accept from stdin:
+To accept data from stdin, you can specify `-` as the filename:
 
  % tabulate-drug-concentration ... | xyplot -
 
@@ -140,10 +145,11 @@ sub xyplot {
     require Chart::Gnuplot;
     require File::Slurper::Dash;
     require File::Temp;
+    require Scalar::Util;
 
     my %args = @_;
 
-    my $fieldsep_re = qr/\s+|\s*,\s*/;
+    my $fieldsep_re = qr/\s*,\s*|\s+/s;
     if (defined $args{delimited}) {
         $fieldsep_re = qr/\Q$args{delimited}\E/;
     }
@@ -181,18 +187,30 @@ sub xyplot {
         if ($args{dataset_datas}) {
             my $dataset = [split $fieldsep_re, $args{dataset_datas}[$i]];
             while (@$dataset) {
-                push @x, shift @$dataset;
-                push @y, shift @$dataset;
+                my $item = shift @$dataset;
+                warn "Not a number in --dataset-data: '$item'" unless Scalar::Util::looks_like_number($item);
+                push @x, $item;
+
+                warn "Odd number of numbers in --dataset-data" unless @$dataset;
+                $item = shift @$dataset;
+                warn "Not a number in --dataset-data: '$item'" unless Scalar::Util::looks_like_number($item);
+                push @y, $item;
             }
         } else {
             my $filename = $args{dataset_files}[$i];
             my $content = File::Slurper::Dash::read_text($filename);
 
-            for my $line (split /^/m, $content) {
-                chomp $line;
-                my @f = split $fieldsep_re, $line;
-                push @x, $f[0];
-                push @y, $f[1];
+            chomp $content;
+            my @numbers = split $fieldsep_re, $content;
+            warn "Odd number of numbers in dataset file '$filename'" unless @numbers % 2 == 0;
+            while (@numbers) {
+                my $item = shift @numbers;
+                warn "Not a number in dataset file '$filename': '$item'" unless Scalar::Util::looks_like_number($item);
+                push @x, $item;
+
+                $item = shift @numbers;
+                warn "Not a number in dataset file '$filename': '$item'" unless Scalar::Util::looks_like_number($item);
+                push @y, $item;
             }
         }
 
